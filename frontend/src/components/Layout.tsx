@@ -1,59 +1,9 @@
-import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { Layers, FolderKanban } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, ChevronDown, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, X } from 'lucide-react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { initials } from '../lib/api';
 
-export const Layout: React.FC = () => {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-8">
-            <NavLink to="/" className="flex items-center space-x-2 text-indigo-600 font-bold text-xl">
-              <Layers className="w-6 h-6" />
-              <span>CapstoneHub</span>
-            </NavLink>
-            <nav className="flex space-x-4">
-              <NavLink
-                to="/"
-                end
-                className={({ isActive }) =>
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`
-                }
-              >
-                Dashboard
-              </NavLink>
-              <NavLink
-                to="/projects"
-                className={({ isActive }) =>
-                  `px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-1 transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`
-                }
-              >
-                <FolderKanban className="w-4 h-4" />
-                <span>Projects</span>
-              </NavLink>
-            </nav>
-          </div>
-          <div className="flex items-center space-x-3 text-sm text-gray-500">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              API Connected
-            </span>
-          </div>
-        </div>
-      </header>
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Outlet />
-      </main>
-      <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-400">
-        CapstoneHub &copy; {new Date().getFullYear()}
-      </footer>
-    </div>
-  );
+export const Layout: React.FC = () => { const { user, logout } = useAuth(); const location = useLocation(); const navigate = useNavigate(); const [mobile, setMobile] = useState(false); const [collapsed, setCollapsed] = useState(false); const faculty = user?.role === 'FACULTY'; const links = faculty ? [{to:'/faculty/dashboard',label:'Faculty overview',icon:ShieldCheck}] : [{to:'/dashboard',label:'Dashboard',icon:LayoutDashboard},{to:'/projects',label:'Projects',icon:PanelLeftOpen}]; const activeProject = location.pathname.match(/\/projects\/([^/]+)/)?.[1]; if (activeProject && !links.some(l => location.pathname.startsWith(l.to))) links.push({to:`/projects/${activeProject}`,label:'Current project',icon:PanelLeftOpen});
+  return <div className="min-h-screen bg-[#f7f8fc] text-slate-900"><aside className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform ${mobile ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 ${collapsed ? 'lg:w-20' : ''}`}><div className="flex h-20 items-center justify-between border-b border-slate-100 px-5"><button onClick={() => navigate('/dashboard')} className="flex items-center gap-3 font-bold"><div className="rounded-xl bg-indigo-600 p-2 text-white"><PanelLeftOpen size={18}/></div>{!collapsed && <span>CapstoneHub</span>}</button><button className="lg:hidden" onClick={() => setMobile(false)}><X size={20}/></button></div><nav className="flex-1 space-y-1 p-4">{links.map(link => <NavLink key={link.to} to={link.to} onClick={() => setMobile(false)} className={({isActive}) => `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}><link.icon size={18}/>{!collapsed && link.label}</NavLink>)}{!collapsed && <div className="mt-8 rounded-2xl bg-[#17213a] p-4 text-white"><p className="text-xs font-semibold text-indigo-300">WORKFLOW</p><p className="mt-2 text-sm leading-6 text-slate-300">Connect planning decisions to the evidence that matters.</p></div>}</nav><div className="border-t border-slate-100 p-4"><button onClick={() => { logout(); navigate('/login'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900"><LogOut size={18}/>{!collapsed && 'Sign out'}</button></div></aside><div className={`${collapsed ? 'lg:pl-20' : 'lg:pl-72'}`}><header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f7f8fc]/90 px-5 backdrop-blur sm:px-8"><div className="flex items-center gap-3"><button className="lg:hidden" onClick={() => setMobile(true)}><Menu size={22}/></button><button className="hidden rounded-lg p-2 text-slate-400 hover:bg-white lg:block" onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelLeftOpen size={19}/> : <PanelLeftClose size={19}/>}</button><span className="hidden text-sm text-slate-400 sm:inline">Academic delivery workspace</span></div><div className="flex items-center gap-4"><button onClick={() => navigate('/notifications')} className="relative rounded-xl p-2 text-slate-500 hover:bg-white"><Bell size={19}/><span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-indigo-500"/></button><div className="flex items-center gap-3 border-l border-slate-200 pl-4"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">{initials(user?.name)}</div><div className="hidden sm:block"><p className="text-sm font-semibold">{user?.name || 'User'}</p><p className="text-xs capitalize text-slate-400">{user?.role?.toLowerCase().replace('_',' ')}</p></div><ChevronDown size={15} className="hidden text-slate-400 sm:block"/></div></div></header><main className="mx-auto max-w-[1500px] p-5 sm:p-8"><Outlet/></main></div></div>;
 };
