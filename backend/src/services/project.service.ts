@@ -29,8 +29,12 @@ export class ProjectService {
     });
   }
 
-  public static async getProjects() {
+  public static async getProjects(user: { id: string; role: Role }) {
+    const accessWhere = user.role === Role.FACULTY
+      ? { facultyId: user.id }
+      : { team: { OR: [{ leadId: user.id }, { members: { some: { userId: user.id } } }] } };
     return prisma.project.findMany({
+      where: accessWhere,
       include: {
         faculty: {
           select: { id: true, name: true, email: true },
@@ -45,7 +49,7 @@ export class ProjectService {
     });
   }
 
-  public static async getProjectById(id: string) {
+  public static async getProjectById(id: string, user: { id: string; role: Role }) {
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
@@ -60,6 +64,14 @@ export class ProjectService {
 
     if (!project) {
       throw new Error('Project not found');
+    }
+
+    const isFacultyAdvisor = user.role === Role.FACULTY && project.facultyId === user.id;
+    const isTeamMember = project.teamId
+      ? Boolean(await prisma.teamMember.findUnique({ where: { teamId_userId: { teamId: project.teamId, userId: user.id } } }))
+      : false;
+    if (!isFacultyAdvisor && !isTeamMember) {
+      throw new AppError('Access denied: insufficient permissions', 403);
     }
 
     return project;
@@ -363,7 +375,8 @@ export class ProjectService {
    */
   public static async getTeamMembers(
     projectId: string,
-    pagination?: { page?: number; pageSize?: number }
+    pagination?: { page?: number; pageSize?: number },
+    user?: { id: string; role: Role }
   ) {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -388,6 +401,12 @@ export class ProjectService {
 
     if (!project.teamId || !project.team) {
       throw new AppError('Project does not have an assigned team', 400);
+    }
+
+    if (user) {
+      const isFacultyAdvisor = user.role === Role.FACULTY && project.facultyId === user.id;
+      const isTeamMember = Boolean(await prisma.teamMember.findUnique({ where: { teamId_userId: { teamId: project.teamId, userId: user.id } } }));
+      if (!isFacultyAdvisor && !isTeamMember) throw new AppError('Access denied: insufficient permissions', 403);
     }
 
     const page = pagination?.page && pagination.page > 0 ? pagination.page : 1;
@@ -539,5 +558,3 @@ export class ProjectService {
     };
   }
 }
-
-

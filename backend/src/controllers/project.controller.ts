@@ -31,7 +31,11 @@ export class ProjectController {
 
   public static async getProjects(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const projects = await ProjectService.getProjects();
+      if (!req.user) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
+      }
+      const projects = await ProjectService.getProjects(req.user);
       res.status(200).json({
         success: true,
         data: projects,
@@ -44,15 +48,19 @@ export class ProjectController {
   public static async getProjectById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const project = await ProjectService.getProjectById(id);
+      if (!req.user) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
+      }
+      const project = await ProjectService.getProjectById(id, req.user);
 
       res.status(200).json({
         success: true,
         data: project,
       });
     } catch (error) {
-      if (error instanceof Error && error.message === 'Project not found') {
-        res.status(404).json({ success: false, error: error.message });
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, error: error.message });
         return;
       }
       next(error);
@@ -138,10 +146,14 @@ export class ProjectController {
    */
   public static async getTeamMembers(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      if (!req.user) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
+      }
       const { id: projectId } = req.params;
       const page = req.query.page ? Number(req.query.page) : undefined;
       const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined;
-      const result = await ProjectService.getTeamMembers(projectId, { page, pageSize });
+      const result = await ProjectService.getTeamMembers(projectId, { page, pageSize }, req.user);
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       if (error instanceof AppError) {
