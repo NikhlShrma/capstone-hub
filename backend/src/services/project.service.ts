@@ -63,7 +63,7 @@ export class ProjectService {
     });
 
     if (!project) {
-      throw new Error('Project not found');
+      throw new AppError('Project not found', 404);
     }
 
     const isFacultyAdvisor = user.role === Role.FACULTY && project.facultyId === user.id;
